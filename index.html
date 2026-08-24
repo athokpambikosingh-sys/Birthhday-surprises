@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Birthday Surprise</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+    
+    body { 
+      background: #0f0f13;
+      color: #ffffff; 
+      min-height: 100vh; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      overflow: hidden; 
+      position: relative;
+    }
+
+    /* Ambient Background Glow */
+    .bg-glow {
+      position: absolute;
+      width: 450px;
+      height: 450px;
+      background: radial-gradient(circle, rgba(255,107,129,0.18) 0%, rgba(0,0,0,0) 70%);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      animation: pulseGlow 6s ease-in-out infinite alternate;
+    }
+    
+    /* Fade Screen Transitions */
+    .screen { 
+      display: flex; 
+      width: 100%; 
+      height: 100vh; 
+      flex-direction: column; 
+      align-items: center; 
+      justify-content: center; 
+      position: absolute; 
+      text-align: center; 
+      padding: 20px; 
+      z-index: 1; 
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(0.96);
+      transition: opacity 0.8s ease-in-out, transform 0.8s ease-in-out;
+    }
+    
+    .screen.active { 
+      opacity: 1;
+      pointer-events: all;
+      transform: scale(1);
+    }
+
+    /* Lock Screen */
+    .lock-icon { font-size: 3.5rem; margin-bottom: 15px; animation: float 3s ease-in-out infinite; }
+    .title { font-size: 1.8rem; font-weight: 700; margin-bottom: 8px; }
+    .subtitle { color: #aaaaaa; font-size: 0.95rem; margin-bottom: 25px; }
+    
+    .pass-input { 
+      background: rgba(255, 255, 255, 0.05); 
+      border: 1px solid rgba(255, 255, 255, 0.2); 
+      backdrop-filter: blur(10px);
+      border-radius: 12px; 
+      padding: 12px 20px; 
+      font-size: 1.5rem; 
+      color: #fff; 
+      text-align: center; 
+      letter-spacing: 8px; 
+      width: 220px; 
+      outline: none; 
+      transition: 0.3s;
+    }
+    .pass-input:focus { border-color: #ff6b81; box-shadow: 0 0 15px rgba(255, 107, 129, 0.3); }
+    
+    .unlock-btn { 
+      background: #ffffff; 
+      color: #111; 
+      border: none; 
+      padding: 12px 40px; 
+      border-radius: 25px; 
+      font-weight: 600; 
+      margin-top: 20px; 
+      cursor: pointer; 
+      font-size: 1rem; 
+      transition: all 0.4s ease; 
+      box-shadow: 0 4px 15px rgba(255,255,255,0.1);
+    }
+    .unlock-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255,255,255,0.25); }
+    .access-text { margin-top: 15px; color: #888; font-size: 0.9rem; }
+
+    /* Loader */
+    .loader-bar { width: 220px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 20px; overflow: hidden; }
+    .loader-fill { width: 0%; height: 100%; background: #ff6b81; transition: width 0.05s linear; }
+
+    /* Video */
+    .hero-video { width: 90%; max-width: 550px; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.6); margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1); }
+
+    /* Cards & Photos */
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; width: 100%; max-width: 800px; margin-bottom: 20px; }
+    .cringe-card { 
+      background: rgba(255, 255, 255, 0.04); 
+      border: 1px solid rgba(255, 255, 255, 0.08); 
+      backdrop-filter: blur(12px);
+      padding: 15px; 
+      border-radius: 16px; 
+      text-align: left; 
+      display: flex; 
+      flex-direction: column; 
+      transition: all 0.5s ease;
+    }
+    .cringe-card:hover { transform: translateY(-6px); border-color: rgba(255, 107, 129, 0.4); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }
+    .cringe-card img { width: 100%; height: 140px; object-fit: cover; border-radius: 10px; margin-bottom: 12px; }
+    .cringe-card h4 { color: #ff6b81; margin-bottom: 6px; font-size: 1.05rem; }
+    .cringe-card p { color: #cccccc; font-size: 0.85rem; line-height: 1.4; }
+
+    /* Letter */
+    .letter-paper { 
+      background: rgba(255, 255, 255, 0.95); 
+      color: #1a1a1e; 
+      padding: 30px; 
+      border-radius: 20px; 
+      max-width: 550px; 
+      text-align: left; 
+      font-family: Georgia, serif; 
+      font-size: 1rem; 
+      line-height: 1.7; 
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5); 
+    }
+    .letter-paper h3 { color: #8b1e22; font-family: sans-serif; margin-bottom: 12px; }
+
+    /* Cake & Glowing Flowers */
+    .cake-icon { font-size: 5.5rem; cursor: pointer; user-select: none; transition: transform 0.3s; animation: pulse 2s infinite; z-index: 2; }
+    .cake-icon:hover { transform: scale(1.15); }
+    
+    .final-reveal { display: none; flex-direction: column; align-items: center; margin-top: 20px; animation: fadeInSoft 1.2s ease forwards; z-index: 2; }
+    .voucher-card { 
+      background: linear-gradient(135deg, #ff6b81, #ff4757); 
+      color: white; 
+      padding: 20px 30px; 
+      border-radius: 16px; 
+      max-width: 400px; 
+      box-shadow: 0 10px 30px rgba(255, 107, 129, 0.4); 
+      margin-top: 15px; 
+      border: 2px dashed rgba(255,255,255,0.6); 
+    }
+    .voucher-card h3 { font-size: 1.3rem; margin-bottom: 5px; }
+    .voucher-card p { font-size: 0.95rem; opacity: 0.9; }
+
+    /* SVG Flower Frame */
+    .flower-container {
+      position: absolute;
+      width: 100%;
+      max-width: 550px;
+      height: 450px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 2s ease-in-out;
+      z-index: 0;
+    }
+
+    .flower-container.glowing {
+      opacity: 1;
+    }
+
+    .flower-svg {
+      width: 100%;
+      height: 100%;
+      filter: drop-shadow(0 0 12px rgba(255, 160, 122, 0.6)) drop-shadow(0 0 25px rgba(0, 206, 209, 0.4));
+      animation: gentlePulse 4s ease-in-out infinite alternate;
+    }
+
+    @keyframes gentlePulse {
+      0% { transform: scale(0.98); filter: drop-shadow(0 0 8px rgba(255, 160, 122, 0.4)); }
+      100% { transform: scale(1.02); filter: drop-shadow(0 0 18px rgba(255, 160, 122, 0.8)) drop-shadow(0 0 30px rgba(0, 206, 209, 0.6)); }
+    }
+
+    @keyframes pulseGlow { 0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.1; } 100% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.25; } }
+    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+    @keyframes fadeInSoft { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    #confetti-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+  </style>
+</head>
+<body>
+
+  <div class="bg-glow"></div>
+  <canvas id="confetti-canvas"></canvas>
+
+  <!-- Audio Player -->
+  <audio id="bg-music" loop preload="auto">
+    <source src="bgm.mp3" type="audio/mpeg">
+    <source src="bng.mp3" type="audio/mpeg">
+  </audio>
+
+  <!-- Screen 1: Minimal Lock Screen -->
+  <div class="screen active" id="screen1">
+    <div class="lock-icon">🎁</div>
+    <div class="title">Something special is waiting...</div>
+    <div class="subtitle">Enter the secret code to unlock your surprise.</div>
+    <input type="password" maxlength="4" id="passCode" class="pass-input" placeholder="••••">
+    <button class="unlock-btn" onclick="checkPass()">Unlock</button>
+    <div class="access-text" id="statusMsg">Access granted... 💫</div>
+  </div>
+
+  <!-- Screen 2: Loading Screen -->
+  <div class="screen" id="screen2">
+    <p style="font-size: 1.3rem;">Loading your birthday surprise...</p>
+    <div class="loader-bar"><div class="loader-fill" id="loader"></div></div>
+  </div>
+
+  <!-- Screen 3: Video -->
+  <div class="screen" id="screen3">
+    <h2 style="margin-bottom: 15px;">A Special Video For You 🎥</h2>
+    <video id="my-video" class="hero-video" controls autoplay muted playsinline>
+      <source src="video.mp4" type="video/mp4">
+      Your browser does not support video.
+    </video>
+    <button class="unlock-btn" onclick="goToCringeCards()">NEXT ➔</button>
+  </div>
+
+  <!-- Screen 4: Cards & Photos -->
+  <div class="screen" id="screen4">
+    <h2 style="margin-bottom: 20px;">Memories & Wish Cards 🤪</h2>
+    <div class="card-grid">
+      <div class="cringe-card">
+        <img src="photo1.jpeg" alt="Memory 1">
+        <h4>Bitches boi 👑</h4>
+        <p>Remember when you did that super embarrassing thing? Yeah, I'm never letting you live that down, Pubi boi!</p>
+      </div>
+      <div class="cringe-card">
+        <img src="photo 2.jpeg" alt="Memory 2">
+        <h4>Ma Bae 💕</h4>
+        <p>No matter how silly or weird we get, you'll always be my favorite person to be cringe with.</p>
+      </div>
+      <div class="cringe-card">
+        <img src="photo 3.jpeg" alt="Memory 3">
+        <h4>Birthday Wish 🌟</h4>
+        <p>May your year be full of laughter, success, good food, and zero embarrassing moments!</p>
+      </div>
+    </div>
+    <button class="unlock-btn" onclick="nextScreen(5)">READ THE LETTER 💌</button>
+  </div>
+
+  <!-- Screen 5: Letter -->
+  <div class="screen" id="screen5">
+    <div class="letter-paper">
+      <h3>Happy Birthday Pubi boi (ma bae)! ❤️</h3>
+      <p>
+        I just wanted to make something special for you to remind you how much you mean to me. Thank you for bringing so much joy, chaos, and sweet moments into my life. 
+      </p>
+      <p style="margin-top: 10px;">
+        I hope this birthday brings you everything you wish for and more. Forever cheering for you!
+      </p>
+    </div>
+    <button class="unlock-btn" style="margin-top: 25px;" onclick="nextScreen(6)">MAKE A WISH 🎂</button>
+  </div>
+
+  <!-- Screen 6: Wish Cake & Glowing Flowers -->
+  <div class="screen" id="screen6">
+    <div class="flower-container" id="flower-frame">
+      <svg class="flower-svg" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Left Stem & Leaves -->
+        <path d="M 200,340 C 130,300 80,220 100,120" stroke="#00ced1" stroke-width="3" stroke-linecap="round" fill="none"/>
+        <path d="M 160,290 C 120,270 110,240 110,240 C 130,240 150,260 160,290 Z" fill="#20b2aa"/>
+        <path d="M 125,230 C 90,200 85,170 85,170 C 105,170 120,190 125,230 Z" fill="#20b2aa"/>
+        <path d="M 108,170 C 80,140 80,110 80,110 C 98,115 108,140 108,170 Z" fill="#20b2aa"/>
+        
+        <!-- Right Stem & Leaves -->
+        <path d="M 200,340 C 270,300 320,220 300,120" stroke="#00ced1" stroke-width="3" stroke-linecap="round" fill="none"/>
+        <path d="M 240,290 C 280,270 290,240 290,240 C 270,240 250,260 240,290 Z" fill="#20b2aa"/>
+        <path d="M 275,230 C 310,200 315,170 315,170 C 295,170 280,190 275,230 Z" fill="#20b2aa"/>
+        <path d="M 292,170 C 320,140 320,110 320,110 C 302,115 292,140 292,170 Z" fill="#20b2aa"/>
+
+        <!-- Left Flower Petals -->
+        <g transform="translate(100, 120)">
+          <path d="M 0,0 C -25,-30 -15,-60 0,-70 C 15,-60 25,-30 0,0 Z" fill="#ffa07a"/>
+          <path d="M -10,-10 C -35,-30 -35,-55 -20,-65 C -5,-55 -5,-30 -10,-10 Z" fill="#ff7f50"/>
+          <path d="M 10,-10 C 35,-30 35,-55 20,-65 C 5,-55 5,-30 10,-10 Z" fill="#ff7f50"/>
+        </g>
+
+        <!-- Right Flower Petals -->
+        <g transform="translate(300, 120)">
+          <path d="M 0,0 C -25,-30 -15,-60 0,-70 C 15,-60 25,-30 0,0 Z" fill="#ffa07a"/>
+          <path d="M -10,-10 C -35,-30 -35,-55 -20,-65 C -5,-55 -5,-30 -10,-10 Z" fill="#ff7f50"/>
+          <path d="M 10,-10 C 35,-30 35,-55 20,-65 C 5,-55 5,-30 10,-10 Z" fill="#ff7f50"/>
+        </g>
+      </svg>
+    </div>
+
+    <h2 style="margin-bottom: 15px; z-index: 2;" id="cake-instruction">Tap the cake to blow out candles!</h2>
+    <div class="cake-icon" id="cake-btn" onclick="blowCandle()">🎂</div>
+    
+    <div class="final-reveal" id="final-reveal">
+      <p style="color: #ff6b81; font-size: 1.2rem; font-weight: bold;">
+        Happy Birthday Pubi boi! May all your wishes come true! ✨❤️
+      </p>
+
+      <div class="voucher-card">
+        <h3>🎟️ OFFICIAL BIRTHDAY COUPON</h3>
+        <p>Valid for 1x Free Dinner Date & Unlimited Hugs from me!</p>
+      </div>
+
+      <button class="unlock-btn" style="margin-top: 25px;" onclick="location.reload()">REPLAY SURPRISE 🔄</button>
+    </div>
+  </div>
+
+  <script>
+    const CORRECT_PASS = "2508"; 
+    const bgMusic = document.getElementById('bg-music');
+    const myVideo = document.getElementById('my-video');
+
+    function checkPass() {
+      const input = document.getElementById('passCode').value;
+      if (input === CORRECT_PASS) {
+        bgMusic.load();
+        startSequence();
+      } else {
+        alert("Wrong secret code! Try again.");
+      }
+    }
+
+    function nextScreen(nextNum) {
+      const currentActive = document.querySelector('.screen.active');
+      const nextActive = document.getElementById(`screen${nextNum}`);
+      
+      if (currentActive) {
+        currentActive.classList.remove('active');
+        setTimeout(() => {
+          nextActive.classList.add('active');
+        }, 400);
+      } else {
+        nextActive.classList.add('active');
+      }
+    }
+
+    function startSequence() {
+      nextScreen(2);
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += 5;
+        document.getElementById('loader').style.width = progress + '%';
+        if (progress >= 100) {
+          clearInterval(interval);
+          nextScreen(3);
+          myVideo.currentTime = 0;
+          myVideo.play();
+        }
+      }, 50);
+    }
+
+    function goToCringeCards() {
+      myVideo.pause();
+      bgMusic.play().then(() => {
+        console.log("Audio playing successfully!");
+      }).catch(e => {
+        console.log("Browser prevented audio play:", e);
+      });
+      nextScreen(4);
+    }
+
+    function blowCandle() {
+      document.getElementById('cake-btn').style.opacity = '0.3';
+      document.getElementById('cake-instruction').innerText = "Wishes sent to the universe! ✨";
+      document.getElementById('final-reveal').style.display = 'flex';
+      document.getElementById('flower-frame').classList.add('glowing');
+      startConfetti();
+    }
+
+    function startConfetti() {
+      const canvas = document.getElementById('confetti-canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      const particles = [];
+      const colors = ['#ff6b81', '#ffffff', '#ffd166', '#06d6a0', '#118ab2'];
+
+      for (let i = 0; i < 100; i++) {
+        particles.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height - canvas.height,
+          size: Math.random() * 8 + 4,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          speedY: Math.random() * 3 + 2,
+          speedX: Math.random() * 2 - 1
+        });
+      }
+
+      function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        particles.forEach(p => {
+          p.y += p.speedY;
+          p.x += p.speedX;
+          if (p.y > canvas.height) p.y = -10;
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        requestAnimationFrame(animate);
+      }
+      animate();
+    }
+  </script>
+</body>
+</html>
